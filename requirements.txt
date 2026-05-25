@@ -4,3 +4,4 @@ moviepy
 Pillow
 PyMuPDF
 flask
+comtypes; sys_platform == "win32"

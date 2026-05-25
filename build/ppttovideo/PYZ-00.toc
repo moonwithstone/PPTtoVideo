@@ -1,4 +1,4 @@
-('/Users/wangyue/Documents/AI应用/PPTtoVideo/build/ppttovideo/PYZ-00.pyz',
+('/Users/wangyue/Documents/AI应用/PPTtoVideo/build/PPTtoVideo/PYZ-00.pyz',
  [('AppKit',
    '/Users/wangyue/Documents/AI应用/PPTtoVideo/venv/lib/python3.13/site-packages/AppKit/__init__.py',
    'PYMODULE'),

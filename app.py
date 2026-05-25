@@ -195,10 +195,22 @@ def download(task_id):
 def list_voices():
     """返回可用的中文语音列表"""
     voices = [
-        {"id": "zh-CN-YunxiNeural", "name": "云希（男声·新闻）", "gender": "male"},
-        {"id": "zh-CN-YunjianNeural", "name": "云健（男声·沉稳）", "gender": "male"},
-        {"id": "zh-CN-XiaoxiaoNeural", "name": "晓晓（女声·温柔）", "gender": "female"},
-        {"id": "zh-CN-XiaoyiNeural", "name": "晓伊（女声·活力）", "gender": "female"},
+        # 男声
+        {"id": "zh-CN-YunxiNeural",    "name": "云希（男声·新闻）",   "gender": "male"},
+        {"id": "zh-CN-YunjianNeural",  "name": "云健（男声·沉稳）",   "gender": "male"},
+        {"id": "zh-CN-YunyangNeural",  "name": "云扬（男声·专业）",   "gender": "male"},
+        {"id": "zh-CN-YunfengNeural",  "name": "云枫（男声·激昂）",   "gender": "male"},
+        {"id": "zh-CN-YunhaoNeural",   "name": "云皓（男声·故事）",   "gender": "male"},
+        {"id": "zh-CN-YunxiaNeural",   "name": "云夏（男声·轻松）",   "gender": "male"},
+        # 女声
+        {"id": "zh-CN-XiaoxiaoNeural", "name": "晓晓（女声·温柔）",   "gender": "female"},
+        {"id": "zh-CN-XiaoyiNeural",   "name": "晓伊（女声·活力）",   "gender": "female"},
+        {"id": "zh-CN-XiaohanNeural",  "name": "晓涵（女声·开朗）",   "gender": "female"},
+        {"id": "zh-CN-XiaomoNeural",   "name": "晓墨（女声·沉静）",   "gender": "female"},
+        {"id": "zh-CN-XiaoxuanNeural", "name": "晓萱（女声·成熟）",   "gender": "female"},
+        {"id": "zh-CN-XiaoqiuNeural",  "name": "晓秋（女声·朗读）",   "gender": "female"},
+        {"id": "zh-CN-XiaozhenNeural", "name": "晓甄（女声·严肃）",   "gender": "female"},
+        {"id": "zh-CN-XiaoshuangNeural","name": "晓双（女声·儿童）",  "gender": "female"},
     ]
     return jsonify(voices)
 

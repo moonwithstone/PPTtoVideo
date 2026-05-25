@@ -379,6 +379,24 @@
                     </div>
                 </div>
             </div>
+            <!-- 首页延迟 -->
+            <div class="rate-slider-wrap" style="margin-top:16px">
+                <div class="rate-slider-header">
+                    <label>首页延迟</label>
+                    <span class="rate-value-badge" id="delayDisplay">0 秒</span>
+                </div>
+                <input type="range" id="delaySlider" min="0" max="5" step="0.5" value="0"
+                       oninput="updateDelayDisplay(this.value)">
+                <div class="rate-ticks">
+                    <span>0</span>
+                    <span>1</span>
+                    <span>2</span>
+                    <span>3</span>
+                    <span>4</span>
+                    <span>5</span>
+                </div>
+            </div>
+
             <!-- 语速控制 -->
             <div class="rate-slider-wrap">
                 <div class="rate-slider-header">
@@ -545,6 +563,7 @@
             formData.append('ppt_file', pptInput.files[0]);
             formData.append('voice', document.getElementById('voiceSelect').value);
             formData.append('rate', getRateValue());
+            formData.append('intro_delay', document.getElementById('delaySlider').value);
             formData.append('save_path', savePath);
 
             if (activeTab === 'edit') {
@@ -637,6 +656,12 @@
             const el = document.getElementById('errorMsg');
             el.textContent = msg;
             el.classList.add('show');
+        }
+
+        // 首页延迟显示
+        function updateDelayDisplay(val) {
+            val = parseFloat(val);
+            document.getElementById('delayDisplay').textContent = val === 0 ? '0 秒' : val + ' 秒';
         }
 
         // 语速滑块显示（0.5 ~ 3.0 倍速）

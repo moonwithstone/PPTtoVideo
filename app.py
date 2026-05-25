@@ -116,6 +116,7 @@ def generate():
     # 获取选项
     voice = request.form.get('voice', 'zh-CN-YunxiNeural')
     rate = request.form.get('rate', '+0%')
+    intro_delay = float(request.form.get('intro_delay', '0'))
     save_path = request.form.get('save_path', '')  # 用户指定的保存路径
 
     # 确定输出路径
@@ -150,6 +151,7 @@ def generate():
             output_path=output_path,
             voice=voice,
             rate=rate,
+            intro_delay=intro_delay,
             progress_cb=task.add_progress,
         )
 

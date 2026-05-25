@@ -578,8 +578,10 @@ async def generate_all_audio(texts: list[str], output_dir: str, voice: str = TTS
 # ==================================================
 
 def create_video(image_paths: list[str], audio_paths: list[str], output_path: str,
-                 default_duration: float = 3.0, progress_cb=None):
-    """将图片和音频合成为视频"""
+                 default_duration: float = 3.0, intro_delay: float = 0.0, progress_cb=None):
+    """将图片和音频合成为视频
+    intro_delay: 第一页画面出现后，延迟多少秒再开始播放音频（默认 0 = 无延迟）
+    """
     clips = []
 
     def log(msg):
@@ -594,6 +596,12 @@ def create_video(image_paths: list[str], audio_paths: list[str], output_path: st
             img_clip = ImageClip(img_path).with_duration(duration).with_audio(audio_clip)
         else:
             img_clip = ImageClip(img_path).with_duration(default_duration)
+
+        # 第一页：在正式片段前插入一段静音片段
+        if i == 0 and intro_delay > 0:
+            silent_clip = ImageClip(img_path).with_duration(intro_delay)
+            clips.append(silent_clip)
+            log(f"第 1 页：插入 {intro_delay:.1f}s 静音前导")
 
         clips.append(img_clip)
         log(f"第 {i + 1}/{len(image_paths)} 页：时长 {img_clip.duration:.1f}s")
@@ -660,7 +668,8 @@ def parse_texts(text_content: str) -> list[str]:
 
 def generate_video_full(ppt_path: str, text_content: str, output_path: str,
                          voice: str = TTS_VOICE, rate: str = TTS_RATE,
-                         default_duration: float = 3.0, progress_cb=None):
+                         default_duration: float = 3.0, intro_delay: float = 0.0,
+                         progress_cb=None):
     """
     完整流程：PPT + 文本 → 视频
     返回: (成功: bool, 消息: str)
@@ -698,7 +707,7 @@ def generate_video_full(ppt_path: str, text_content: str, output_path: str,
         while len(audio_paths) < len(image_paths):
             audio_paths.append(None)
 
-        total_duration = create_video(image_paths, audio_paths, output_path, default_duration, progress_cb)
+        total_duration = create_video(image_paths, audio_paths, output_path, default_duration, intro_delay, progress_cb)
         return True, f"视频生成成功！总时长 {total_duration:.1f} 秒"
 
     except Exception as e:

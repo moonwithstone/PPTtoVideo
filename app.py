@@ -195,12 +195,12 @@ def download(task_id):
 def list_voices():
     """返回可用的中文语音列表"""
     voices = [
-        {"id": "zh-CN-YunxiNeural",   "name": "云希（男声·阳光）", "gender": "male"},
-        {"id": "zh-CN-YunjianNeural", "name": "云健（男声·激情）", "gender": "male"},
-        {"id": "zh-CN-YunyangNeural", "name": "云扬（男声·专业）", "gender": "male"},
-        {"id": "zh-CN-YunxiaNeural",  "name": "云夏（男声·可爱）", "gender": "male"},
-        {"id": "zh-CN-XiaoxiaoNeural","name": "晓晓（女声·温柔）", "gender": "female"},
-        {"id": "zh-CN-XiaoyiNeural",  "name": "晓伊（女声·活力）", "gender": "female"},
+        {"id": "zh-CN-YunxiNeural",    "name": "云希（男声·新闻）", "gender": "male"},
+        {"id": "zh-CN-YunjianNeural",  "name": "云健（男声·沉稳）", "gender": "male"},
+        {"id": "zh-CN-YunyangNeural",  "name": "云扬（男声·专业）", "gender": "male"},
+        {"id": "zh-CN-XiaoxiaoNeural", "name": "晓晓（女声·温柔）", "gender": "female"},
+        {"id": "zh-CN-XiaoyiNeural",   "name": "晓伊（女声·活力）", "gender": "female"},
+        {"id": "zh-CN-YunxiaNeural",   "name": "云夏（女声·卡通）", "gender": "female"},
     ]
     return jsonify(voices)
 

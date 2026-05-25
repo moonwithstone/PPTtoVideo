@@ -99,21 +99,28 @@ def detect_office_software():
     results = []
 
     if IS_WINDOWS:
-        # Windows: 通过 COM 检测
+        # Windows: 通过 win32com 检测（比 comtypes 更稳定）
         try:
-            import comtypes.client
-            # 检测 WPS
+            import pythoncom
+            import win32com.client
+            pythoncom.CoInitialize()
             try:
-                comtypes.client.CreateObject("KWPP.Application")
-                results.append({"name": "WPS Office", "type": "wps_com", "available": True})
-            except Exception:
-                pass
-            # 检测 MS Office
-            try:
-                comtypes.client.CreateObject("PowerPoint.Application")
-                results.append({"name": "Microsoft Office", "type": "ms_com", "available": True})
-            except Exception:
-                pass
+                # 检测 WPS
+                try:
+                    app = win32com.client.Dispatch("KWPP.Application")
+                    app.Quit()
+                    results.append({"name": "WPS Office", "type": "wps_com", "available": True})
+                except Exception:
+                    pass
+                # 检测 MS Office
+                try:
+                    app = win32com.client.Dispatch("PowerPoint.Application")
+                    app.Quit()
+                    results.append({"name": "Microsoft Office", "type": "ms_com", "available": True})
+                except Exception:
+                    pass
+            finally:
+                pythoncom.CoUninitialize()
         except ImportError:
             pass
 
@@ -171,11 +178,9 @@ def check_dependencies():
 
 
 def _convert_ppt_windows_com(ppt_path: str, output_dir: str, com_type: str, progress_cb=None) -> list[str]:
-    """Windows: 使用 COM 自动化将 PPT 另存为 PDF，再用 PyMuPDF 转图片
-    比逐页 Export 更稳定，WPS 和 MS Office 均支持 SaveAs PDF（格式常量 32）
-    """
-    import comtypes
-    import comtypes.client
+    """Windows: 使用 win32com 将 PPT 另存为 PDF，再用 PyMuPDF 转图片"""
+    import pythoncom
+    import win32com.client
 
     def log(msg):
         if progress_cb:
@@ -187,18 +192,19 @@ def _convert_ppt_windows_com(ppt_path: str, output_dir: str, com_type: str, prog
     app_name = "KWPP.Application" if com_type == "wps_com" else "PowerPoint.Application"
     log(f"使用 {software_name} 转换 PPT...")
 
-    # COM 必须在当前线程初始化（Flask 后台线程不会自动初始化）
-    comtypes.CoInitialize()
+    # Flask 后台线程必须手动初始化 COM（STA 模式，Office 要求）
+    pythoncom.CoInitialize()
     pdf_dir = tempfile.mkdtemp()
     pdf_path = os.path.join(pdf_dir, Path(ppt_path).stem + ".pdf")
 
     try:
-        app = comtypes.client.CreateObject(app_name)
+        app = win32com.client.Dispatch(app_name)
         app.Visible = False
         try:
+            # WithWindow=False：后台打开，不显示演示窗口
             presentation = app.Presentations.Open(ppt_path, WithWindow=False)
             try:
-                # 32 = ppSaveAsPDF，WPS 和 MS Office 通用常量
+                # 32 = ppSaveAsPDF，WPS 和 MS Office 通用
                 presentation.SaveAs(pdf_path, 32)
                 log(f"{software_name} 导出 PDF 成功")
             finally:
@@ -209,7 +215,7 @@ def _convert_ppt_windows_com(ppt_path: str, output_dir: str, com_type: str, prog
             except Exception:
                 pass
     finally:
-        comtypes.CoUninitialize()
+        pythoncom.CoUninitialize()
 
     if not os.path.exists(pdf_path):
         shutil.rmtree(pdf_dir, ignore_errors=True)
@@ -525,25 +531,76 @@ def ppt_to_images(ppt_path: str, output_dir: str, progress_cb=None) -> list[str]
 #  文本转语音
 # ==================================================
 
-def _apply_pause_markers(text: str) -> str:
-    """将文本中的 [#Xs] 停顿标记转换为 SSML <break> 标签
-    例如：今天天气不错。[#0.5s]明天可能下雨。
-    →  <speak>今天天气不错。<break time="0.5s"/>明天可能下雨。</speak>
+import re as _re
+_PAUSE_PATTERN = _re.compile(r'\[#(\d+(?:\.\d+)?)s\]')
+
+
+def _split_by_pauses(text: str) -> list:
+    """将文本按 [#Xs] 停顿标记拆分
+    返回列表，元素交替为：文本段(str) 和 停顿秒数(float)
+    例如："你好。[#0.5s]再见。" → ["你好。", 0.5, "再见。"]
     """
-    import re
-    pattern = r'\[#(\d+(?:\.\d+)?)s\]'
-    if not re.search(pattern, text):
-        return text  # 没有停顿标记，直接返回原文本
-    # 替换所有停顿标记
-    ssml_text = re.sub(pattern, r'<break time="\1s"/>', text)
-    return f'<speak>{ssml_text}</speak>'
+    parts = _PAUSE_PATTERN.split(text)
+    result = []
+    for i, part in enumerate(parts):
+        if i % 2 == 0:          # 文本段
+            if part.strip():
+                result.append(part.strip())
+        else:                    # 停顿秒数（split 捕获组）
+            result.append(float(part))
+    return result
+
+
+def _make_silence(duration: float, output_path: str, sample_rate: int = 44100):
+    """生成指定时长的静音 WAV 文件"""
+    import wave, struct
+    n_frames = int(duration * sample_rate)
+    with wave.open(output_path, 'w') as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(2)          # 16-bit
+        wf.setframerate(sample_rate)
+        wf.writeframes(b'\x00' * n_frames * 2 * 2)
 
 
 async def text_to_speech(text: str, output_path: str, voice: str = TTS_VOICE, rate: str = TTS_RATE):
-    """使用 edge-tts 将文本转为语音，支持 [#Xs] 停顿标记"""
-    processed = _apply_pause_markers(text)
-    communicate = edge_tts.Communicate(processed, voice, rate=rate)
-    await communicate.save(output_path)
+    """使用 edge-tts 将文本转为语音，支持 [#Xs] 停顿标记
+    有停顿时：将文本拆段分别生成音频，中间插入静音，最后拼接为一个文件
+    """
+    if not _PAUSE_PATTERN.search(text):
+        # 无停顿标记，直接生成
+        communicate = edge_tts.Communicate(text, voice, rate=rate)
+        await communicate.save(output_path)
+        return
+
+    # 有停顿标记：拆分 → 分段生成 → 拼接
+    segments = _split_by_pauses(text)
+    seg_dir = tempfile.mkdtemp(prefix="tts_seg_")
+    clip_paths = []
+
+    try:
+        idx = 0
+        for seg in segments:
+            if isinstance(seg, str):
+                seg_path = os.path.join(seg_dir, f"seg_{idx:03d}.mp3")
+                communicate = edge_tts.Communicate(seg, voice, rate=rate)
+                await communicate.save(seg_path)
+                clip_paths.append(seg_path)
+            else:  # float，停顿秒数
+                sil_path = os.path.join(seg_dir, f"sil_{idx:03d}.wav")
+                _make_silence(seg, sil_path)
+                clip_paths.append(sil_path)
+            idx += 1
+
+        # 用 MoviePy 拼接所有片段
+        from moviepy import AudioFileClip, concatenate_audioclips
+        clips = [AudioFileClip(p) for p in clip_paths]
+        final = concatenate_audioclips(clips)
+        final.write_audiofile(output_path, fps=44100, logger=None)
+        for c in clips:
+            c.close()
+
+    finally:
+        shutil.rmtree(seg_dir, ignore_errors=True)
 
 
 async def generate_all_audio(texts: list[str], output_dir: str, voice: str = TTS_VOICE,

@@ -1,0 +1,6 @@
+python-pptx
+edge-tts
+moviepy
+Pillow
+PyMuPDF
+flask

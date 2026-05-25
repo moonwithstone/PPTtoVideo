@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPT 转视频</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title .badge {
+            background: #4f46e5;
+            color: #fff;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        /* 文件上传区 */
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+        .upload-area:hover { border-color: #4f46e5; background: #f5f3ff; }
+        .upload-area.has-file { border-color: #10b981; background: #ecfdf5; }
+        .upload-area input[type="file"] { display: none; }
+        .upload-icon { font-size: 36px; margin-bottom: 8px; }
+        .upload-text { color: #6b7280; font-size: 14px; }
+        .upload-filename { color: #10b981; font-weight: 600; font-size: 15px; margin-top: 4px; }
+
+        /* 文本输入 */
+        .text-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .text-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .text-tab.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+            font-weight: 600;
+        }
+        .text-panel { display: none; }
+        .text-panel.active { display: block; }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 14px;
+            line-height: 1.8;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        textarea:focus { outline: none; border-color: #4f46e5; }
+        .textarea-hint {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 8px;
+        }
+        .line-counter {
+            font-size: 12px;
+            color: #6b7280;
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        /* 选项 */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        /* 语速滑块 */
+        .rate-slider-wrap {
+            margin-top: 16px;
+        }
+        .rate-slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .rate-slider-header label {
+            font-size: 13px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        .rate-value-badge {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4f46e5;
+            background: #ede9fe;
+            padding: 2px 10px;
+            border-radius: 99px;
+            min-width: 48px;
+            text-align: center;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #4f46e5;
+            cursor: pointer;
+            display: block;
+        }
+        .rate-ticks {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            padding: 0 1px;
+        }
+        .rate-ticks span {
+            font-size: 11px;
+            color: #9ca3af;
+            text-align: center;
+        }
+        .rate-ticks span.highlight {
+            color: #4f46e5;
+            font-weight: 600;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        select, input[type="text"] {
+            width: 100%;
+            height: 42px;
+            padding: 0 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        /* 按钮 */
+        .btn-generate {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-generate:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(79,70,229,0.3); }
+        .btn-generate:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 进度区 */
+        .progress-area {
+            display: none;
+            margin-top: 20px;
+        }
+        .progress-area.show { display: block; }
+        .progress-bar-wrap {
+            background: #e5e7eb;
+            border-radius: 999px;
+            height: 6px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 999px;
+            transition: width 0.5s;
+            width: 0%;
+        }
+        .progress-bar.indeterminate {
+            width: 30%;
+            animation: indeterminate 1.5s ease-in-out infinite;
+        }
+        @keyframes indeterminate {
+            0% { margin-left: 0; }
+            50% { margin-left: 70%; }
+            100% { margin-left: 0; }
+        }
+        .progress-log {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .progress-log .log-line { color: #a5b4fc; }
+        .progress-log .log-line:last-child { color: #34d399; }
+
+        /* 结果区 */
+        .result-area {
+            display: none;
+            text-align: center;
+            padding: 24px;
+        }
+        .result-area.show { display: block; }
+        .result-icon { font-size: 48px; margin-bottom: 12px; }
+        .result-msg { font-size: 16px; color: #333; margin-bottom: 20px; }
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 32px;
+            background: #10b981;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-download:hover { background: #059669; }
+
+        .error-msg {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 12px;
+            display: none;
+        }
+        .error-msg.show { display: block; }
+
+        /* 环境警告 */
+        .env-warning {
+            background: #fffbeb;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 13px;
+            color: #92400e;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .env-warning.show { display: block; }
+
+        @media (max-width: 640px) {
+            .options-grid { grid-template-columns: 1fr; }
+            .container { padding: 20px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PPT 转视频</h1>
+        <p class="subtitle">上传 PPT，输入旁白文本，一键生成带语音的视频</p>
+
+        <div class="env-warning" id="envWarning"></div>
+
+        <!-- 步骤1：上传 PPT -->
+        <div class="card">
+            <div class="card-title"><span class="badge">1</span>上传文件</div>
+            <div class="upload-area" id="pptUpload" onclick="document.getElementById('pptInput').click()">
+                <input type="file" id="pptInput" accept=".ppt,.pptx,.pdf">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">点击或拖拽上传文件</div>
+                <div class="upload-text" style="font-size:12px;margin-top:4px">支持 .pptx / .ppt / .pdf 格式（推荐用 PDF）</div>
+                <div class="upload-filename" id="pptFilename"></div>
+            </div>
+        </div>
+
+        <!-- 步骤2：输入文本 -->
+        <div class="card">
+            <div class="card-title"><span class="badge">2</span>旁白文本</div>
+            <div class="text-tabs">
+                <div class="text-tab active" data-tab="edit">直接编辑</div>
+                <div class="text-tab" data-tab="upload">上传文件</div>
+            </div>
+            <div class="text-panel active" id="panel-edit">
+                <textarea id="textContent" placeholder="按空行分页，同一页内的多行会拼接为一段连续旁白。例如：&#10;&#10;欢迎大家收看本次产品演示。&#10;&#10;首先我们来看一下产品的整体架构。&#10;包括前端、后端和数据库三大模块。&#10;&#10;接下来是核心功能介绍。"></textarea>
+                <div class="textarea-hint">按空行分页 · 同一页内可写多行（会自动拼接） · 页数需与 PDF/PPT 页数一致</div>
+                <div class="line-counter" id="lineCounter">0 页</div>
+            </div>
+            <div class="text-panel" id="panel-upload">
+                <div class="upload-area" id="textUpload" onclick="document.getElementById('textInput').click()">
+                    <input type="file" id="textInput" accept=".txt">
+                    <div class="upload-icon">📝</div>
+                    <div class="upload-text">点击上传文本文件 (.txt)</div>
+                    <div class="upload-filename" id="textFilename"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤3：选项 -->
+        <div class="card">
+            <div class="card-title"><span class="badge">3</span>生成选项</div>
+            <div class="options-grid">
+                <div class="form-group">
+                    <label>语音角色</label>
+                    <select id="voiceSelect">
+                        <option value="zh-CN-YunxiNeural">云希（男声·新闻）</option>
+                        <option value="zh-CN-YunjianNeural">云健（男声·沉稳）</option>
+                        <option value="zh-CN-XiaoxiaoNeural">晓晓（女声·温柔）</option>
+                        <option value="zh-CN-XiaoyiNeural">晓伊（女声·活力）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>保存位置</label>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="savePath" placeholder="点击右侧按钮选择保存位置" readonly style="flex:1;cursor:pointer;background:#f9fafb" onclick="pickSavePath()">
+                        <button onclick="pickSavePath()" style="height:42px;padding:0 16px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:13px">浏览...</button>
+                    </div>
+                </div>
+            </div>
+            <!-- 语速控制 -->
+            <div class="rate-slider-wrap">
+                <div class="rate-slider-header">
+                    <label>语速</label>
+                    <span class="rate-value-badge" id="rateDisplay">1</span>
+                </div>
+                <input type="range" id="rateSlider" min="0.5" max="3" step="0.05" value="1"
+                       list="rateTickList" oninput="updateRateDisplay(this.value)">
+                <datalist id="rateTickList">
+                    <option value="0.5"></option>
+                    <option value="1"></option>
+                    <option value="1.5"></option>
+                    <option value="2"></option>
+                    <option value="2.5"></option>
+                    <option value="3"></option>
+                </datalist>
+                <div class="rate-ticks">
+                    <span>0.5</span>
+                    <span>1</span>
+                    <span>1.5</span>
+                    <span>2</span>
+                    <span>2.5</span>
+                    <span>3</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 生成按钮 -->
+        <button class="btn-generate" id="btnGenerate" onclick="startGenerate()">
+            开始生成视频
+        </button>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <!-- 进度区 -->
+        <div class="progress-area" id="progressArea">
+            <div class="card">
+                <div class="card-title">生成进度</div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar indeterminate" id="progressBar"></div>
+                </div>
+                <div class="progress-log" id="progressLog"></div>
+            </div>
+        </div>
+
+        <!-- 结果区 -->
+        <div class="result-area" id="resultArea">
+            <div class="card">
+                <div class="result-icon" id="resultIcon">✅</div>
+                <div class="result-msg" id="resultMsg">视频生成成功！</div>
+                <div id="saveResult" style="margin-top:8px;font-size:14px;color:#065f46;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 文件上传处理
+        const pptInput = document.getElementById('pptInput');
+        const textInput = document.getElementById('textInput');
+        const pptUpload = document.getElementById('pptUpload');
+
+        pptInput.addEventListener('change', function() {
+            const name = this.files[0]?.name || '';
+            document.getElementById('pptFilename').textContent = name;
+            pptUpload.classList.toggle('has-file', !!name);
+        });
+
+        textInput.addEventListener('change', function() {
+            const name = this.files[0]?.name || '';
+            document.getElementById('textFilename').textContent = name;
+            document.getElementById('textUpload').classList.toggle('has-file', !!name);
+        });
+
+        // 拖拽上传
+        pptUpload.addEventListener('dragover', e => { e.preventDefault(); pptUpload.style.borderColor = '#4f46e5'; });
+        pptUpload.addEventListener('dragleave', () => { pptUpload.style.borderColor = ''; });
+        pptUpload.addEventListener('drop', e => {
+            e.preventDefault();
+            pptUpload.style.borderColor = '';
+            if (e.dataTransfer.files.length) {
+                pptInput.files = e.dataTransfer.files;
+                pptInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Tab 切换
+        document.querySelectorAll('.text-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.text-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.text-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // 页数计数（按空行分页）
+        const textArea = document.getElementById('textContent');
+        textArea.addEventListener('input', () => {
+            const text = textArea.value.trim();
+            if (!text) {
+                document.getElementById('lineCounter').textContent = '0 页';
+                return;
+            }
+            // 按连续空行分割
+            const pages = text.split(/\n\s*\n/).filter(p => p.trim()).length;
+            document.getElementById('lineCounter').textContent = pages + ' 页';
+        });
+
+        // 环境检查
+        fetch('/check').then(r => r.json()).then(data => {
+            const el = document.getElementById('envWarning');
+            if (!data.ok) {
+                el.innerHTML = '<strong>⚠ 系统依赖缺失：</strong><br>' + data.issues.join('<br>');
+                el.style.background = '#fef2f2';
+                el.style.borderColor = '#fca5a5';
+                el.style.color = '#991b1b';
+                el.classList.add('show');
+            } else if (data.offices && data.offices.length > 0) {
+                el.innerHTML = '<strong>✅ 已检测到办公软件：</strong>' + data.offices.join('、');
+                el.style.background = '#ecfdf5';
+                el.style.borderColor = '#6ee7b7';
+                el.style.color = '#065f46';
+                el.classList.add('show');
+            }
+        }).catch(() => {});
+
+        // 生成视频
+        let currentTaskId = null;
+        let pollTimer = null;
+
+        async function startGenerate() {
+            const btn = document.getElementById('btnGenerate');
+            const errorEl = document.getElementById('errorMsg');
+            errorEl.classList.remove('show');
+
+            // 验证文件
+            if (!pptInput.files.length) {
+                showError('请先上传 PPT 或 PDF 文件');
+                return;
+            }
+
+            const activeTab = document.querySelector('.text-tab.active').dataset.tab;
+            const textContent = document.getElementById('textContent').value;
+            const hasTextFile = textInput.files.length > 0;
+
+            if (activeTab === 'edit' && !textContent.trim()) {
+                showError('请输入旁白文本');
+                return;
+            }
+            if (activeTab === 'upload' && !hasTextFile) {
+                showError('请上传文本文件');
+                return;
+            }
+
+            // 验证保存路径
+            const savePath = document.getElementById('savePath').value;
+            if (!savePath) {
+                showError('请先选择视频保存位置');
+                return;
+            }
+
+            // 构造 FormData
+            const formData = new FormData();
+            formData.append('ppt_file', pptInput.files[0]);
+            formData.append('voice', document.getElementById('voiceSelect').value);
+            formData.append('rate', getRateValue());
+            formData.append('save_path', savePath);
+
+            if (activeTab === 'edit') {
+                formData.append('text_content', textContent);
+            } else {
+                formData.append('text_file', textInput.files[0]);
+            }
+
+            // 禁用按钮
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+
+            // 显示进度区，隐藏结果区
+            document.getElementById('progressArea').classList.add('show');
+            document.getElementById('resultArea').classList.remove('show');
+            document.getElementById('progressLog').innerHTML = '';
+
+            try {
+                const resp = await fetch('/generate', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (data.error) {
+                    showError(data.error);
+                    btn.disabled = false;
+                    btn.textContent = '开始生成视频';
+                    return;
+                }
+
+                currentTaskId = data.task_id;
+                pollProgress();
+            } catch (e) {
+                showError('请求失败：' + e.message);
+                btn.disabled = false;
+                btn.textContent = '开始生成视频';
+            }
+        }
+
+        function pollProgress() {
+            if (!currentTaskId) return;
+
+            fetch(`/task/${currentTaskId}`)
+                .then(r => r.json())
+                .then(data => {
+                    // 更新日志
+                    const logEl = document.getElementById('progressLog');
+                    logEl.innerHTML = data.progress.map(l => `<div class="log-line">${l}</div>`).join('');
+                    logEl.scrollTop = logEl.scrollHeight;
+
+                    if (data.status === 'completed') {
+                        // 完成
+                        document.getElementById('progressBar').classList.remove('indeterminate');
+                        document.getElementById('progressBar').style.width = '100%';
+
+                        document.getElementById('resultArea').classList.add('show');
+                        document.getElementById('resultIcon').textContent = '✅';
+                        document.getElementById('resultMsg').textContent = '视频生成成功！';
+                        const resultPath = document.getElementById('savePath').value;
+                        document.getElementById('saveResult').textContent = '已保存到: ' + resultPath;
+
+                        resetBtn();
+                    } else if (data.status === 'failed') {
+                        // 失败
+                        document.getElementById('progressBar').classList.remove('indeterminate');
+                        document.getElementById('progressBar').style.width = '100%';
+                        document.getElementById('progressBar').style.background = '#ef4444';
+
+                        document.getElementById('resultArea').classList.add('show');
+                        document.getElementById('resultIcon').textContent = '❌';
+                        document.getElementById('resultMsg').textContent = data.error || '生成失败';
+                        document.getElementById('saveResult').textContent = '';
+
+                        resetBtn();
+                    } else {
+                        // 继续轮询
+                        pollTimer = setTimeout(pollProgress, 1000);
+                    }
+                })
+                .catch(() => {
+                    pollTimer = setTimeout(pollProgress, 2000);
+                });
+        }
+
+        function resetBtn() {
+            const btn = document.getElementById('btnGenerate');
+            btn.disabled = false;
+            btn.textContent = '开始生成视频';
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+        }
+
+        // 语速滑块显示（0.5 ~ 3.0 倍速）
+        function updateRateDisplay(val) {
+            const v = parseFloat(val);
+            document.getElementById('rateDisplay').textContent = parseFloat(v.toFixed(2)).toString();
+        }
+
+        function getRateValue() {
+            const multiplier = parseFloat(document.getElementById('rateSlider').value);
+            const pct = Math.round((multiplier - 1) * 100);
+            if (pct === 0) return '+0%';
+            return (pct > 0 ? '+' : '') + pct + '%';
+        }
+
+        // 选择保存位置
+        async function pickSavePath() {
+            try {
+                if (window.pywebview && window.pywebview.api) {
+                    const result = await window.pywebview.api.pick_save_path();
+                    if (result && result.success) {
+                        document.getElementById('savePath').value = result.path;
+                    }
+                } else {
+                    // 浏览器模式：用户手动输入
+                    document.getElementById('savePath').readOnly = false;
+                    document.getElementById('savePath').placeholder = '请输入保存路径，如 ~/Desktop/output.mp4';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>

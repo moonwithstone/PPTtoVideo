@@ -171,7 +171,10 @@ def check_dependencies():
 
 
 def _convert_ppt_windows_com(ppt_path: str, output_dir: str, com_type: str, progress_cb=None) -> list[str]:
-    """Windows: 使用 COM 自动化（WPS 或 MS Office）将 PPT 导出为图片"""
+    """Windows: 使用 COM 自动化将 PPT 另存为 PDF，再用 PyMuPDF 转图片
+    比逐页 Export 更稳定，WPS 和 MS Office 均支持 SaveAs PDF（格式常量 32）
+    """
+    import comtypes
     import comtypes.client
 
     def log(msg):
@@ -180,27 +183,41 @@ def _convert_ppt_windows_com(ppt_path: str, output_dir: str, com_type: str, prog
         print(msg)
 
     ppt_path = os.path.abspath(ppt_path)
+    software_name = "WPS Office" if com_type == "wps_com" else "Microsoft Office"
     app_name = "KWPP.Application" if com_type == "wps_com" else "PowerPoint.Application"
-    log(f"使用 {'WPS' if com_type == 'wps_com' else 'MS Office'} 转换 PPT...")
+    log(f"使用 {software_name} 转换 PPT...")
 
-    app = comtypes.client.CreateObject(app_name)
-    app.Visible = False
+    # COM 必须在当前线程初始化（Flask 后台线程不会自动初始化）
+    comtypes.CoInitialize()
+    pdf_dir = tempfile.mkdtemp()
+    pdf_path = os.path.join(pdf_dir, Path(ppt_path).stem + ".pdf")
 
     try:
-        presentation = app.Presentations.Open(ppt_path, WithWindow=False)
-        image_paths = []
-
-        for i in range(1, presentation.Slides.Count + 1):
-            slide = presentation.Slides.Item(i)
-            img_path = os.path.join(output_dir, f"slide_{i:03d}.png")
-            slide.Export(img_path, "PNG", 1920, 1080)
-            image_paths.append(img_path)
-            log(f"已导出第 {i}/{presentation.Slides.Count} 页图片")
-
-        presentation.Close()
-        return image_paths
+        app = comtypes.client.CreateObject(app_name)
+        app.Visible = False
+        try:
+            presentation = app.Presentations.Open(ppt_path, WithWindow=False)
+            try:
+                # 32 = ppSaveAsPDF，WPS 和 MS Office 通用常量
+                presentation.SaveAs(pdf_path, 32)
+                log(f"{software_name} 导出 PDF 成功")
+            finally:
+                presentation.Close()
+        finally:
+            try:
+                app.Quit()
+            except Exception:
+                pass
     finally:
-        app.Quit()
+        comtypes.CoUninitialize()
+
+    if not os.path.exists(pdf_path):
+        shutil.rmtree(pdf_dir, ignore_errors=True)
+        raise RuntimeError(f"{software_name} 导出 PDF 失败，请确认文件未被其他程序占用")
+
+    image_paths = pdf_to_images(pdf_path, output_dir, progress_cb)
+    shutil.rmtree(pdf_dir, ignore_errors=True)
+    return image_paths
 
 
 def _convert_ppt_mac_applescript(ppt_path: str, output_dir: str, app_type: str, progress_cb=None) -> list[str]:

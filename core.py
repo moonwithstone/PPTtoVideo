@@ -525,9 +525,24 @@ def ppt_to_images(ppt_path: str, output_dir: str, progress_cb=None) -> list[str]
 #  文本转语音
 # ==================================================
 
+def _apply_pause_markers(text: str) -> str:
+    """将文本中的 [#Xs] 停顿标记转换为 SSML <break> 标签
+    例如：今天天气不错。[#0.5s]明天可能下雨。
+    →  <speak>今天天气不错。<break time="0.5s"/>明天可能下雨。</speak>
+    """
+    import re
+    pattern = r'\[#(\d+(?:\.\d+)?)s\]'
+    if not re.search(pattern, text):
+        return text  # 没有停顿标记，直接返回原文本
+    # 替换所有停顿标记
+    ssml_text = re.sub(pattern, r'<break time="\1s"/>', text)
+    return f'<speak>{ssml_text}</speak>'
+
+
 async def text_to_speech(text: str, output_path: str, voice: str = TTS_VOICE, rate: str = TTS_RATE):
-    """使用 edge-tts 将文本转为语音"""
-    communicate = edge_tts.Communicate(text, voice, rate=rate)
+    """使用 edge-tts 将文本转为语音，支持 [#Xs] 停顿标记"""
+    processed = _apply_pause_markers(text)
+    communicate = edge_tts.Communicate(processed, voice, rate=rate)
     await communicate.save(output_path)
 
 

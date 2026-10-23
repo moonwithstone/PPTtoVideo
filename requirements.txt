@@ -2,6 +2,8 @@ python-pptx
 edge-tts
 moviepy
 Pillow
-PyMuPDF
+# 固定 1.27.2.3：2.0 起 import fitz 会激活 pymupdf.layout 并加载 ONNX 模型资源，
+# 行为变化大且打包需额外收资源文件，本项目用不到该特性
+PyMuPDF==1.27.2.3
 flask
 pywin32; sys_platform == "win32"

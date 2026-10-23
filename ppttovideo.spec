@@ -19,6 +19,9 @@ extra_datas += copy_metadata('pillow')
 extra_datas += copy_metadata('tqdm')
 extra_datas += copy_metadata('proglog')
 extra_datas += copy_metadata('pymupdf')
+# pymupdf 2.x 的 layout 模块在 import 时就要读取包内 resources/onnx 模型文件，
+# PyInstaller 默认不收非 .py 文件，必须显式收集，否则打包后启动即 FileNotFoundError
+extra_datas += collect_data_files('pymupdf')
 extra_datas += copy_metadata('edge_tts')
 extra_datas += collect_data_files('imageio_ffmpeg')
 extra_datas += collect_data_files('certifi')
